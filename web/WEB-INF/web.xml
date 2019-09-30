@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app id="WebApp_ID" version="3.0" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd">
+    <display-name>proyectoTiendaVirtual</display-name>
+    <servlet>
+        <servlet-name>ControllerPrincipal</servlet-name>
+        <servlet-class>frontReport.controllers.ControllerPrincipal</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>SubirArchivo</servlet-name>
+        <servlet-class>frontReport.controllers.SubirArchivo</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>ProcesarArchivo</servlet-name>
+        <servlet-class>frontReport.controllers.ProcesarArchivo</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ControllerPrincipal</servlet-name>
+        <url-pattern>/ControllerPrincipal</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>SubirArchivo</servlet-name>
+        <url-pattern>/SubirArchivo</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>ProcesarArchivo</servlet-name>
+        <url-pattern>/ProcesarArchivo</url-pattern>
+    </servlet-mapping>
+    <welcome-file-list>
+        <welcome-file>ControllerPrincipal</welcome-file>
+    </welcome-file-list>
+</web-app>
