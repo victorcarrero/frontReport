@@ -18,6 +18,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -148,7 +149,8 @@ public class ProcesarArchivo extends HttpServlet {
         String filtro = request.getParameter("filtro");
         List filasFiltradas = extraerFilas(ruta, Integer.parseInt(idColumna), filtro);
         JsonArray jsonArray = extraerInformacion(filasFiltradas, ruta);
-        escribirReporte(jsonArray,  getServletContext().getRealPath("") + File.separator+ "archivos");
+        System.out.println(jsonArray.toString());
+        escribirReporte(jsonArray, getServletContext().getRealPath("") + File.separator + "archivos");
         System.out.println("filtro");
     }
 
@@ -167,7 +169,8 @@ public class ProcesarArchivo extends HttpServlet {
         InputStream excelStream = null;
         ArrayList<Integer> filasFiltradas = new ArrayList<Integer>();
         try {
-            excelStream = new FileInputStream(new File((String) ruta));
+            System.out.println(ruta);
+            excelStream = new FileInputStream(new File(ruta));
             Workbook workbook = WorkbookFactory.create(excelStream);
             Sheet sheet = workbook.getSheetAt(0);
             Cell cell;
@@ -216,7 +219,7 @@ public class ProcesarArchivo extends HttpServlet {
             Row row = null;
             Column column;
             for (int i = 0; i < filasFiltradas.size(); i++) {
-                row = sheet.getRow(i);
+                row = sheet.getRow((int) filasFiltradas.get(i));
                 if (row != null) {
                     JsonObject jsonObject = new JsonObject();
                     for (int j = 0; j < row.getLastCellNum(); j++) {
@@ -224,7 +227,7 @@ public class ProcesarArchivo extends HttpServlet {
                         if (cell.getCellTypeEnum() == CellType.NUMERIC) {
                             jsonObject.addProperty(String.valueOf(j), String.valueOf(cell.getNumericCellValue()));
                         } else if (cell.getCellTypeEnum() == CellType.STRING) {
-                            jsonObject.addProperty(String.valueOf(j), String.valueOf(cell.getNumericCellValue()));
+                            jsonObject.addProperty(String.valueOf(j), cell.getStringCellValue());
                         }
                     }
                     jsonArray.add(jsonObject);
@@ -246,8 +249,8 @@ public class ProcesarArchivo extends HttpServlet {
 
     }
 
-    public boolean escribirReporte(JsonArray jsonArray, String ruta) throws IOException{
-        
+    public boolean escribirReporte(JsonArray jsonArray, String ruta) throws IOException {
+
         HSSFWorkbook workbook = new HSSFWorkbook();
         HSSFSheet sheet = workbook.createSheet();
         workbook.setSheetName(0, "Hoja excel");
@@ -265,18 +268,16 @@ public class ProcesarArchivo extends HttpServlet {
 
         CellStyle style = workbook.createCellStyle();
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-
-        Iterator<String> iter = (Iterator<String>) jsonArray.get(0).getAsJsonObject().keySet();
         ArrayList<String> cabeceras = new ArrayList<String>();
-        while (iter.hasNext()) {
-            String key = iter.next();
+        JsonObject json = (JsonObject) jsonArray.get(0);
+        for (String key : json.keySet()) {
             cabeceras.add(key);
         }
         // este va a ser el nombre de las columnas 
-        int headersExcel = jsonArray.get(0).getAsJsonObject().keySet().size();
+        int headersExcel = cabeceras.size();
         HSSFRow headerRow = sheet.createRow(0);
         for (int j = 0; j < headersExcel; j++) {
-            String header = "column" + j;
+            String header = cabeceras.get(j);
             HSSFCell cell = headerRow.createCell(j);
             cell.setCellStyle(headerStyle);
             cell.setCellValue(header);
@@ -291,12 +292,13 @@ public class ProcesarArchivo extends HttpServlet {
 
         FileOutputStream file = null;
         try {
-            file = new FileOutputStream(ruta+ File.separator +"data.xls");
+            file = new FileOutputStream(ruta + File.separator + "data.xls");
         } catch (FileNotFoundException ex) {
             Logger.getLogger(ProcesarArchivo.class.getName()).log(Level.SEVERE, null, ex);
         }
         try {
             workbook.write(file);
+            System.out.println("escribio el archivo");
         } catch (IOException ex) {
             Logger.getLogger(ProcesarArchivo.class.getName()).log(Level.SEVERE, null, ex);
         }

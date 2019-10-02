@@ -6,7 +6,6 @@
 package frontReport.controllers;
 
 import com.sun.media.sound.InvalidFormatException;
-import esentialreport.mediador.Mediador;
 import frontReport.valueobject.ColumnaVO;
 import java.io.File;
 import java.io.FileInputStream;
@@ -158,7 +157,6 @@ public class SubirArchivo extends HttpServlet {
                 }
             }
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(Mediador.class.getName()).log(Level.SEVERE, null, ex);
         } catch (org.apache.poi.openxml4j.exceptions.InvalidFormatException ex) {
             Logger.getLogger(SubirArchivo.class.getName()).log(Level.SEVERE, null, ex);
         } catch (EncryptedDocumentException ex) {
@@ -167,7 +165,6 @@ public class SubirArchivo extends HttpServlet {
             try {
                 excelStream.close();
             } catch (IOException ex) {
-                Logger.getLogger(Mediador.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         return nombreColumnas;

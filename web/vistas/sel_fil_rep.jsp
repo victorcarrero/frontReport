@@ -111,7 +111,10 @@
         alert("hola");
             //var orderId =  $("#orderId").val();
             alert("va filtrar");
-             var estadoFiltro= $('#estadoColumna:selected').text();
+            var selectEstado = document.getElementById("estadoColumna");
+            
+             var estadoFiltro= selectEstado.options[selectEstado.selectedIndex].text
+             alert("filtro: " + estadoFiltro)
                var columnaSelected = $('#columnName').val();
              console.log(estadoFiltro);
             $.post("ProcesarArchivo", {filtro: estadoFiltro, idColumna : columnaSelected },
