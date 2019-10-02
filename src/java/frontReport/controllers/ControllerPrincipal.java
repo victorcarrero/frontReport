@@ -5,7 +5,6 @@
  */
 package frontReport.controllers;
 
-import esentialreport.util.SubirArchivo;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.logging.Level;
@@ -63,7 +62,6 @@ public class ControllerPrincipal extends HttpServlet {
             throws ServletException, IOException {
 
         try {
-            SubirArchivo.subir(request, "archivos/");
         } catch (Exception ex) {
             Logger.getLogger(ControllerPrincipal.class.getName()).log(Level.SEVERE, null, ex);
         }
