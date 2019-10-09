@@ -52,22 +52,18 @@
             <label class="checkbox-inline"><input type="checkbox" value="">Diagrama de tortas</label>
         </div>
 
-        
+
 
     </form>
-<button  class="btn btn-info btn-lg btn-responsive" id="btnAgregarFiltro"> <span class="glyphicon glyphicon-search"></span> Añadir filtro</button>
+    <button  class="btn btn-info btn-lg btn-responsive" id="btnAgregarFiltro"> <span class="glyphicon glyphicon-search" ></span> Añadir filtro</button>
 
 
 
-    <div  id="divFacturas"  >
-        <hr>
+    <div  id="divTablaFiltro"  >
         <div class="panel-heading">
-            <div class="pull-left">                                                                   
-                <h6 id="agregar-inf" class="txt-dark capitalize-font" onclick=""><i class="zmdi zmdi-account mr-10 icon-25"></i>Filtros seleccionados</h6>
-            </div>
             <div class="clearfix"></div>
         </div>
-        <table id="tablaFacturas" class="table table-bordered table-hover">
+        <table id="tablaFiltros" class="table table-bordered table-hover">
             <thead>
                 <tr>
                     <th>Columna</th>
@@ -79,14 +75,22 @@
         </table>
     </div>
 
-    <button  class="btn btn-info btn-lg btn-responsive" id="btnFiltrar" onclick="javascript: alerta();"> <span class="glyphicon glyphicon-search"></span> filtrar</button>
+    <button  class="btn btn-info btn-lg btn-responsive" id="btnFiltrar" onclick="javascript: filtrarReporte();"> <span class="glyphicon glyphicon-search"></span> filtrar</button>
 </body>
 
 
 <script language="javascript">
 
-
-    $('#tablaFacturas').dataTable();
+    var jsonFiltros;
+    $('#tablaFiltros').dataTable({
+        "bPaginate": false,
+        "bFilter": false,
+        "bSort": false,
+        language: {
+            "zeroRecords": " "
+        },
+    });
+    $(".odd").remove();
     function listarColumnas() {
         var columnaSelected = $('#columnName').val();//When HTML DOM "click" event is invoked on element with ID "somebutton", execute the following function...
         $.get("ProcesarArchivo?idColumna=" + columnaSelected, function (responseJson) {                 //Execute Ajax GET request on URL of "someservlet" and execute the following function with Ajax response JSON...
@@ -102,14 +106,36 @@
     $("#btnAgregarFiltro").click(function () {
         var selectColumna = document.getElementById("columnName");
         var nombreColumna = selectColumna.options[selectColumna.selectedIndex].text;
+        var posColumna = selectColumna.options[selectColumna.selectedIndex].value;
         var selectEstado = document.getElementById("estadoColumna");
         var estadoFiltro = selectEstado.options[selectEstado.selectedIndex].text
-        var newRowContent = "<tr><td>"+ nombreColumna +"</td><td>"+estadoFiltro+"</td></tr>"
-        $("#tablaFacturas tbody").append(newRowContent);
+        var newRowContent = "<tr><td value = " + posColumna + ">" + nombreColumna + "</td><td value = " + estadoFiltro + ">" + estadoFiltro + "</td></tr>"
+        $("#tablaFiltros tbody").append(newRowContent);
     });
 
 
-
+    function filtrarReporte() {
+        var datosFiltrar = JSON.stringify(cargarFiltros());
+        $.ajax({
+            url: 'ProcesarArchivo',
+            type: 'POST',
+            data: {operacionProcesar: 1, datosFiltro: datosFiltrar},
+            success: function (respuesta) {
+//          var listaUsuarios = $("#lista-usuarios");
+//          $.each(respuesta.data, function(index, elemento) {
+//            listaUsuarios.append(
+//                '<div>'
+//              +     '<p>' + elemento.first_name + ' ' + elemento.last_name + '</p>'
+//              +     '<img src=' + elemento.avatar + '></img>'
+//              + '</div>'
+//            );    
+//          });
+            },
+            error: function () {
+                console.log("No se ha podido obtener la información");
+            }
+        });
+    }
 
 
     function alerta() {
@@ -125,36 +151,14 @@
                 });
     }
 
+    function cargarFiltros() {
+        var data = [];
+        $("#tablaFiltros tbody tr").each(function (index) {
+            var filasFiltro = $(this).children("td");
+            data.push({"posColumna": filasFiltro[0].getAttribute("value"), "estadoFiltrar": filasFiltro[1].getAttribute("value")});
+        });
+        return data;
+    }
 
-    $('#PersonTableContainer').jtable({
-        title: 'Table of people',
-        actions: {
-            listAction: '/GettingStarted/PersonList',
-            createAction: '/GettingStarted/CreatePerson',
-            updateAction: '/GettingStarted/UpdatePerson',
-            deleteAction: '/GettingStarted/DeletePerson'
-        },
-        fields: {
-            PersonId: {
-                key: true,
-                list: false
-            },
-            Name: {
-                title: 'Author Name',
-                width: '40%'
-            },
-            Age: {
-                title: 'Age',
-                width: '20%'
-            },
-            RecordDate: {
-                title: 'Record date',
-                width: '30%',
-                type: 'date',
-                create: false,
-                edit: false
-            }
-        }
-    });
 
 </script>

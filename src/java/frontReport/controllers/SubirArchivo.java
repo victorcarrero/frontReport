@@ -5,7 +5,6 @@
  */
 package frontReport.controllers;
 
-import com.sun.media.sound.InvalidFormatException;
 import frontReport.valueobject.ColumnaVO;
 import java.io.File;
 import java.io.FileInputStream;
@@ -29,6 +28,7 @@ import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.poi.EncryptedDocumentException;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.formula.functions.Column;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -93,48 +93,52 @@ public class SubirArchivo extends HttpServlet {
      */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException, InvalidFormatException {
-        String rutaArchivo = "";
-        HttpSession session = request.getSession();
-
+            throws ServletException, IOException {
         try {
-            FileItemFactory factory = new DiskFileItemFactory();
-            ServletFileUpload upload = new ServletFileUpload(factory);
-            String uploadPath = getServletContext().getRealPath("") + File.separator + "archivos";
-
+            String rutaArchivo = "";
+            HttpSession session = request.getSession();
+            
+            try {
+                FileItemFactory factory = new DiskFileItemFactory();
+                ServletFileUpload upload = new ServletFileUpload(factory);
+                String uploadPath = getServletContext().getRealPath("") + File.separator + "archivos";
+                
 // req es la HttpServletRequest que recibimos del formulario.
 // Los items obtenidos serán cada uno de los campos del formulario,
 // tanto campos normales como ficheros subidos.
-            List items = upload.parseRequest(request);
+List items = upload.parseRequest(request);
 
 // Se recorren todos los items, que son de tipo FileItem
-            for (Object item : items) {
-                FileItem uploaded = (FileItem) item;
-
-                // Hay que comprobar si es un campo de formulario. Si no lo es, se guarda el fichero
-                // subido donde nos interese
-                if (!uploaded.isFormField()) {
-                    // No es campo de formulario, guardamos el fichero en algún sitio
-                    File fichero = new File(uploadPath, uploaded.getName());
-                    rutaArchivo = fichero.getAbsolutePath();
-                    try {
-                        uploaded.write(fichero);
-                    } catch (Exception ex) {
-                        Logger.getLogger(SubirArchivo.class.getName()).log(Level.SEVERE, null, ex);
-                    }
-                } else {
-                    // es un campo de formulario, podemos obtener clave y valor
-                    String key = uploaded.getFieldName();
-                    String valor = uploaded.getString();
-                }
-            }
-
-        } catch (FileUploadException ex) {
+for (Object item : items) {
+    FileItem uploaded = (FileItem) item;
+    
+    // Hay que comprobar si es un campo de formulario. Si no lo es, se guarda el fichero
+    // subido donde nos interese
+    if (!uploaded.isFormField()) {
+        // No es campo de formulario, guardamos el fichero en algún sitio
+        File fichero = new File(uploadPath, uploaded.getName());
+        rutaArchivo = fichero.getAbsolutePath();
+        try {
+            uploaded.write(fichero);
+        } catch (Exception ex) {
             Logger.getLogger(SubirArchivo.class.getName()).log(Level.SEVERE, null, ex);
         }
-        session.setAttribute("rutaArchivo", rutaArchivo);
-        request.setAttribute("columnasFiltrables", listarColumnasFiltrables(rutaArchivo));
-        request.getRequestDispatcher("vistas/sel_fil_rep.jsp").forward(request, response);
+    } else {
+        // es un campo de formulario, podemos obtener clave y valor
+        String key = uploaded.getFieldName();
+        String valor = uploaded.getString();
+    }
+}
+
+            } catch (FileUploadException ex) {
+                Logger.getLogger(SubirArchivo.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            session.setAttribute("rutaArchivo", rutaArchivo);
+            request.setAttribute("columnasFiltrables", listarColumnasFiltrables(rutaArchivo));
+            request.getRequestDispatcher("vistas/sel_fil_rep.jsp").forward(request, response);
+        } catch (InvalidFormatException ex) {
+            Logger.getLogger(SubirArchivo.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public List listarColumnasFiltrables(String ruta) throws IOException, InvalidFormatException {

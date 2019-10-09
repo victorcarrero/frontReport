@@ -7,7 +7,9 @@ package frontReport.controllers;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -16,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -44,6 +47,13 @@ import org.apache.poi.ss.usermodel.Sheet;
 import static org.apache.poi.ss.usermodel.TableStyleType.headerRow;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartUtilities;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
 
 /**
  *
@@ -93,7 +103,6 @@ public class ProcesarArchivo extends HttpServlet {
         TreeMap estados = new TreeMap< String, String>();
         HttpSession session = request.getSession();
         int columna = Integer.parseInt(request.getParameter("idColumna"));
-        System.out.println("===============");
         try {
             excelStream = new FileInputStream(new File((String) session.getAttribute("rutaArchivo")));
             Workbook workbook = WorkbookFactory.create(excelStream);
@@ -101,7 +110,7 @@ public class ProcesarArchivo extends HttpServlet {
             Cell cell;
             Row row = null;
             Column column;
-            for (int i = 0; i < sheet.getLastRowNum() + 1; i++) {
+            for (int i = 1; i < sheet.getLastRowNum() + 1; i++) {
                 row = sheet.getRow(i);
                 if (row != null && i != 65535) {
                     cell = row.getCell(columna);
@@ -142,16 +151,77 @@ public class ProcesarArchivo extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        String opcionProcesar = request.getParameter("operacionProcesar");
+        String filtro = request.getParameter("datosFiltro");
+        JsonParser parser = new JsonParser();
+        JsonElement jsonFiltro = parser.parse(filtro);
+        JsonArray elementosFiltro = jsonFiltro.getAsJsonArray();
         HttpSession session = request.getSession();
-        System.out.println("filtrar");
         String ruta = (String) session.getAttribute("rutaArchivo");
-        String idColumna = request.getParameter("idColumna");
-        String filtro = request.getParameter("filtro");
-        List filasFiltradas = extraerFilas(ruta, Integer.parseInt(idColumna), filtro);
-        JsonArray jsonArray = extraerInformacion(filasFiltradas, ruta);
-        System.out.println(jsonArray.toString());
-        escribirReporte(jsonArray, getServletContext().getRealPath("") + File.separator + "archivos");
-        System.out.println("filtro");
+        switch (1) {
+            case 1: //filtrar el archivo
+                String idColumna = request.getParameter("idColumna");
+                //String filtro = request.getParameter("filtro");
+
+                List filasFiltradas = extraerFilas(ruta, elementosFiltro);
+               HashMap dataSetEstados = extraerInformacionGrafica(ruta, elementosFiltro, session);
+                JsonArray jsonArray = extraerInformacion(filasFiltradas, ruta);
+                System.out.println(jsonArray.toString());
+                escribirReporte(jsonArray, getServletContext().getRealPath("") + File.separator + "archivos");
+                generarImagen(dataSetEstados, 0, 0,  getServletContext().getRealPath("") + File.separator + "archivos");
+                break;
+            case 2:
+
+                break;
+
+            default:
+
+        }
+
+    }
+
+    public String generarImagen(HashMap dataSetEstados, int totalRegistros, int tipoGrafica, String ruta) throws IOException {
+ final String fiat = "FIAT";
+      final String audi = "AUDI";
+      final String ford = "FORD";
+      final String speed = "Speed";
+      final String millage = "Millage";
+      final String userrating = "User Rating";
+      final String safety = "safety";
+
+      final DefaultCategoryDataset dataset = new DefaultCategoryDataset( );
+      for (Object valorClave: dataSetEstados.keySet()) {
+          System.out.println("valorClave:"+dataSetEstados.get(valorClave).toString());
+          System.out.println("valor"+ valorClave.toString());
+           dataset.addValue(Double.parseDouble(dataSetEstados.get(valorClave).toString()), valorClave.toString(),"datos");
+      }
+//      dataset.addValue( 1.0 , fiat , speed );
+//      dataset.addValue( 3.0 , fiat , userrating );
+//      dataset.addValue( 5.0 , fiat , millage );
+//      dataset.addValue( 5.0 , fiat , safety );
+//
+//      dataset.addValue( 5.0 , audi , speed );
+//      dataset.addValue( 6.0 , audi , userrating );
+//      dataset.addValue( 10.0 , audi , millage );
+//      dataset.addValue( 4.0 , audi , safety );
+//
+//      dataset.addValue( 4.0 , ford , speed );
+//      dataset.addValue( 2.0 , ford , userrating );
+//      dataset.addValue( 3.0 , ford , millage );
+//      dataset.addValue( 6.0 , ford , safety );
+
+      JFreeChart barChart = ChartFactory.createBarChart(
+         "CAR USAGE STATIStICS", 
+         "Category", "Score", 
+         dataset,PlotOrientation.VERTICAL, 
+         true, true, false);
+         
+      int width = 640;    /* Width of the image */
+      int height = 480;   /* Height of the image */ 
+        System.out.println("grafica");
+      File BarChart = new File(ruta + File.separator+ "BarChart.jpeg" ); 
+      ChartUtilities.saveChartAsJPEG( BarChart , barChart , width , height );
+        return "";
     }
 
     /**
@@ -164,7 +234,130 @@ public class ProcesarArchivo extends HttpServlet {
         return "Short description";
     }// </editor-fold>
 
-    public List extraerFilas(String ruta, int columna, String filtro) throws IOException {
+    public List extraerFilas(String ruta, JsonArray elementosFiltro) throws IOException {//esta fallando cuando hay filas vacias revisar
+
+        InputStream excelStream = null;
+        ArrayList<Integer> filasFiltradas = new ArrayList<Integer>();
+        try {
+            excelStream = new FileInputStream(new File(ruta));
+            Workbook workbook = WorkbookFactory.create(excelStream);
+            Sheet sheet = workbook.getSheetAt(0);
+            Cell cell = null;
+            Row row = null;
+            Column columna;
+            int columnaFiltro;
+            String estadoFiltro;
+
+            for (int i = 0; i < sheet.getLastRowNum() + 1; i++) {
+                row = sheet.getRow(i);
+                if (row != null && i != 65535) {
+                    boolean verificacionCelda = true;
+                    for (int j = 0; j < elementosFiltro.size(); j++) {
+                        JsonObject jsonFiltro = (JsonObject) elementosFiltro.get(j);
+                        columnaFiltro = Integer.parseInt(String.valueOf(jsonFiltro.get("posColumna")).replaceAll("\"", ""));
+                        estadoFiltro = jsonFiltro.get("estadoFiltrar").toString().replaceAll("\"", "");
+                        cell = row.getCell(columnaFiltro);
+                        if (cell.getCellTypeEnum() == CellType.NUMERIC) {
+
+                            if (!String.valueOf(cell.getNumericCellValue()).equalsIgnoreCase(estadoFiltro)) {
+                                verificacionCelda = false;
+                            }
+                        } else if (cell.getCellTypeEnum() == CellType.STRING) {
+
+                            if (!cell.getRichStringCellValue().getString().equalsIgnoreCase(estadoFiltro)) {
+                                verificacionCelda = false;
+                            }
+                        }
+                    }
+                    if (verificacionCelda) {
+                        if (cell.getCellTypeEnum() == CellType.NUMERIC) {
+                            System.out.println(String.valueOf(cell.getNumericCellValue()));
+                        }
+                        if (cell.getCellTypeEnum() == CellType.STRING) {
+                            System.out.println(cell.getRichStringCellValue().getString());
+                        }
+                        filasFiltradas.add(i);
+                    }
+
+                }
+            }
+        } catch (FileNotFoundException ex) {
+        } catch (InvalidFormatException ex) {
+            Logger.getLogger(ProcesarArchivo.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (EncryptedDocumentException ex) {
+            Logger.getLogger(ProcesarArchivo.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            try {
+                excelStream.close();
+            } catch (IOException ex) {
+            }
+        }
+
+        return filasFiltradas;
+
+    }
+
+    public HashMap extraerInformacionGrafica(String ruta, JsonArray elementosFiltro, HttpSession session) throws IOException {//esta fallando cuando hay filas vacias revisar
+
+        InputStream excelStream = null;
+        JsonArray dataSetGrafica = new JsonArray();
+        HashMap<String, Integer> objectResult = new HashMap<String, Integer>();
+        try {
+            excelStream = new FileInputStream(new File(ruta));
+            Workbook workbook = WorkbookFactory.create(excelStream);
+            Sheet sheet = workbook.getSheetAt(0);
+            Cell cell = null;
+            Row row = null;
+            int columnaFiltro;
+            String estadoFiltro;
+            session.setAttribute("totalRegistros", sheet.getLastRowNum() + 1);
+            for (int i = 1; i < sheet.getLastRowNum() + 1; i++) {
+                row = sheet.getRow(i);
+                if (row != null && i != 65535) {
+                    boolean verificacionCelda = true;
+                    String estadoActualData = "";
+                    ArrayList<String> estadoActualDatos = new ArrayList<String>();
+                    for (int j = 0; j < elementosFiltro.size(); j++) {
+                        JsonObject jsonFiltro = (JsonObject) elementosFiltro.get(j);
+                        columnaFiltro = Integer.parseInt(String.valueOf(jsonFiltro.get("posColumna")).replaceAll("\"", ""));
+                        estadoFiltro = jsonFiltro.get("estadoFiltrar").toString().replaceAll("\"", "");
+                        cell = row.getCell(columnaFiltro);
+
+                        if (cell.getCellTypeEnum() == CellType.NUMERIC) {
+                            estadoActualDatos.add(String.valueOf(cell.getNumericCellValue()));
+                            estadoActualData += "-" + String.valueOf(cell.getNumericCellValue());
+                        } else if (cell.getCellTypeEnum() == CellType.STRING) {
+                            estadoActualDatos.add(cell.getRichStringCellValue().getString());
+                            estadoActualData += "-" + cell.getRichStringCellValue().getString();
+                        }
+                    }
+
+                    if (objectResult.get(estadoActualData) != null) {
+                        int cantidadActual = objectResult.get(estadoActualData);
+                        cantidadActual++;
+                        objectResult.replace(estadoActualData, cantidadActual);
+                    } else {
+                        objectResult.put(estadoActualData, 1);
+                    }
+                }
+            }
+        } catch (FileNotFoundException ex) {
+        } catch (InvalidFormatException ex) {
+            Logger.getLogger(ProcesarArchivo.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (EncryptedDocumentException ex) {
+            Logger.getLogger(ProcesarArchivo.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            try {
+                excelStream.close();
+            } catch (IOException ex) {
+            }
+        }
+
+        return objectResult;
+
+    }
+
+    public List extraerFilas2(String ruta, int columna, String filtro) throws IOException {
 
         InputStream excelStream = null;
         ArrayList<Integer> filasFiltradas = new ArrayList<Integer>();
@@ -187,15 +380,19 @@ public class ProcesarArchivo extends HttpServlet {
                     } else if (cell.getCellTypeEnum() == CellType.STRING) {
                         if (cell.getRichStringCellValue().getString().equalsIgnoreCase(filtro)) {
                             filasFiltradas.add(i);
+
                         }
                     }
                 }
             }
         } catch (FileNotFoundException ex) {
         } catch (InvalidFormatException ex) {
-            Logger.getLogger(ProcesarArchivo.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(ProcesarArchivo.class
+                    .getName()).log(Level.SEVERE, null, ex);
+
         } catch (EncryptedDocumentException ex) {
-            Logger.getLogger(ProcesarArchivo.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(ProcesarArchivo.class
+                    .getName()).log(Level.SEVERE, null, ex);
         } finally {
             try {
                 excelStream.close();
@@ -231,13 +428,17 @@ public class ProcesarArchivo extends HttpServlet {
                         }
                     }
                     jsonArray.add(jsonObject);
+
                 }
             }
         } catch (FileNotFoundException ex) {
         } catch (InvalidFormatException ex) {
-            Logger.getLogger(ProcesarArchivo.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(ProcesarArchivo.class
+                    .getName()).log(Level.SEVERE, null, ex);
+
         } catch (EncryptedDocumentException ex) {
-            Logger.getLogger(ProcesarArchivo.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(ProcesarArchivo.class
+                    .getName()).log(Level.SEVERE, null, ex);
         } finally {
             try {
                 excelStream.close();
@@ -293,19 +494,25 @@ public class ProcesarArchivo extends HttpServlet {
         FileOutputStream file = null;
         try {
             file = new FileOutputStream(ruta + File.separator + "data.xls");
+
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(ProcesarArchivo.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(ProcesarArchivo.class
+                    .getName()).log(Level.SEVERE, null, ex);
         }
         try {
             workbook.write(file);
             System.out.println("escribio el archivo");
+
         } catch (IOException ex) {
-            Logger.getLogger(ProcesarArchivo.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(ProcesarArchivo.class
+                    .getName()).log(Level.SEVERE, null, ex);
         }
         try {
             file.close();
+
         } catch (IOException ex) {
-            Logger.getLogger(ProcesarArchivo.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(ProcesarArchivo.class
+                    .getName()).log(Level.SEVERE, null, ex);
         }
         return true;
 
